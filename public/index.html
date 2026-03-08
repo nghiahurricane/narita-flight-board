@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Narita Flight Board PRO</title>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=VT323&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="main-wrapper">
+        <div class="top-header">
+            <div class="header-left">
+                <div class="header-logo">NARITA INT'L AIRPORT</div>
+                <div class="header-update" id="last-update">Last Updated: --:--</div>
+            </div>
+            <div class="header-time" id="clock">00:00:00</div>
+        </div>
+
+        <div class="tabs-container">
+            <button id="btn-dep" class="tab-btn active" onclick="switchTab('dep')">DEPARTURES</button>
+            <button id="btn-arr" class="tab-btn" onclick="switchTab('arr')">ARRIVALS</button>
+        </div>
+
+        <div class="controls-container">
+            <input type="text" id="search-box" placeholder="Search (e.g., HAN, VN311)..." oninput="renderBoard()">
+            
+            <select id="type-filter" onchange="renderBoard()">
+                <option value="ALL">All (Int'l & Dom)</option>
+                <option value="I">International Only</option>
+                <option value="D">Domestic Only</option>
+            </select>
+
+            <div class="multi-select">
+                <div class="select-box" onclick="toggleAirlineDropdown()">Airlines Filter ▾</div>
+                <div class="dropdown-content" id="airline-dropdown">
+                    <div class="clear-filter-btn" onclick="clearAirlineFilter()">❌ Clear All</div>
+                    <div id="airline-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="board-container">
+            <div class="board-header">
+                <span id="col-std">STD</span>
+                <span id="col-etd">ETD</span>
+                <span id="col-loc">DESTINATION</span>
+                <span>FLIGHT</span>
+                <span>GATE</span>
+                <span>STATUS</span>
+            </div>
+            
+            <div id="flight-list" class="flight-list">
+                <p style="text-align: center; padding: 40px; font-size: 24px;">SYSTEM INITIALIZING...</p>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
