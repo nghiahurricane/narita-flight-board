@@ -1,2 +1,5 @@
 node_modules/
 flights_data.json
+service_account.json
+sheets_config.json
+node_modules/

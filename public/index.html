@@ -1,60 +1,234 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Narita Flight Board PRO</title>
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=VT323&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* ===== HISTORY BUTTON ===== */
+        #btn-history {
+            background: #111;
+            color: #ff8800;
+            border: 1px solid #ff8800;
+            padding: 6px 14px;
+            font-size: 1.05rem;
+            font-family: 'Oswald', sans-serif;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: 0.25s;
+            display: none;
+            white-space: nowrap;
+        }
+        #btn-history:hover { background: #ff8800; color: #000; }
+
+        /* ===== HISTORY MODAL ===== */
+        #history-modal .modal-content { max-width: 540px; }
+        .history-date-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #1a1a1a;
+            cursor: pointer;
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.1rem;
+            color: #ccc;
+            transition: background 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .history-date-item:hover { background: #1a2a1a; color: #00ff00; }
+        .history-date-item::before { content: '📅'; font-size: 1.2rem; }
+
+        /* ===== ALLIANCE LOGO BADGE OVERRIDE ===== */
+        .am-alliance {
+            display: inline-flex !important;
+            align-items: center;
+            padding: 3px 10px 3px 7px;
+        }
+
+        /* ===== HISTORY MODE BANNER ===== */
+        #history-mode-banner {
+            font-family: 'Oswald', sans-serif;
+        }
+
+        /* ===== DIVIDER ===== */
+        .divider-line { width: 1px; background: #333; align-self: stretch; }
+
+        @media screen and (max-width: 768px) {
+            #btn-history { font-size: 0.85rem; padding: 4px 8px; }
+            .date-tabs-container { grid-template-columns: 1fr 1fr 1fr auto !important; }
+        }
+    </style>
 </head>
 <body>
-    <div class="main-wrapper">
-        <div class="top-header">
-            <div class="header-left">
-                <div class="header-logo">NARITA INT'L AIRPORT</div>
-                <div class="header-update" id="last-update">Last Updated: --:--</div>
+<div class="main-wrapper">
+
+    <!-- HEADER -->
+    <div class="top-header">
+        <div class="header-left">
+            <div class="header-logo">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="#00ffff"><path d="M21,16V14L13,9V3.5A1.5,1.5 0 0,0 11.5,2A1.5,1.5 0 0,0 10,3.5V9L2,14V16L10,13.5V19L8,20.5V22L11.5,21L15,22V20.5L13,19V13.5L21,16Z"/></svg>
+                <span>NARITA INT'L AIRPORT <span style="color:#00ffff;font-size:1.2rem;">(NRT / RJAA)</span></span>
             </div>
-            <div class="header-time" id="clock">00:00:00</div>
-        </div>
-
-        <div class="tabs-container">
-            <button id="btn-dep" class="tab-btn active" onclick="switchTab('dep')">DEPARTURES</button>
-            <button id="btn-arr" class="tab-btn" onclick="switchTab('arr')">ARRIVALS</button>
-        </div>
-
-        <div class="controls-container">
-            <input type="text" id="search-box" placeholder="Search (e.g., HAN, VN311)..." oninput="renderBoard()">
-            
-            <select id="type-filter" onchange="renderBoard()">
-                <option value="ALL">All (Int'l & Dom)</option>
-                <option value="I">International Only</option>
-                <option value="D">Domestic Only</option>
-            </select>
-
-            <div class="multi-select">
-                <div class="select-box" onclick="toggleAirlineDropdown()">Airlines Filter ▾</div>
-                <div class="dropdown-content" id="airline-dropdown">
-                    <div class="clear-filter-btn" onclick="clearAirlineFilter()">❌ Clear All</div>
-                    <div id="airline-list"></div>
+            <div style="display:flex;align-items:center;gap:15px;margin-top:5px;">
+                <div class="header-update" id="lbl-last-update">Last Updated: --:--</div>
+                <div class="lang-selector" style="display:flex;gap:8px;">
+                    <img src="https://flagcdn.com/w40/gb.png" onclick="changeLanguage('en')" style="width:26px;cursor:pointer;" alt="EN">
+                    <img src="https://flagcdn.com/w40/jp.png" onclick="changeLanguage('ja')" style="width:26px;cursor:pointer;" alt="JA">
+                    <img src="https://flagcdn.com/w40/vn.png" onclick="changeLanguage('vi')" style="width:26px;cursor:pointer;" alt="VI">
                 </div>
             </div>
         </div>
+        <div class="header-time" id="clock">00:00:00</div>
+    </div>
 
-        <div class="board-container">
-            <div class="board-header">
-                <span id="col-std">STD</span>
-                <span id="col-etd">ETD</span>
-                <span id="col-loc">DESTINATION</span>
-                <span>FLIGHT</span>
-                <span>GATE</span>
-                <span>STATUS</span>
+    <!-- WEATHER -->
+    <div class="weather-bar">
+        <div class="weather-label">LIVE WEATHER (RJAA)</div>
+        <div class="weather-marquee-container">
+            <div class="weather-marquee" id="nrt-metar">Fetching Aviation Weather data...</div>
+        </div>
+    </div>
+
+    <!-- DATE + TAB SWITCHER (History button added) -->
+    <div class="master-tabs-wrapper">
+        <div class="date-tabs-container" style="display:flex;gap:8px;align-items:center;flex-grow:1;">
+            <button id="btn-date-yesterday" class="date-btn" onclick="switchDate('yesterday')">YESTERDAY</button>
+            <button id="btn-date-today"     class="date-btn active" onclick="switchDate('today')">TODAY</button>
+            <button id="btn-date-tomorrow"  class="date-btn" onclick="switchDate('tomorrow')">TOMORROW</button>
+            <button id="btn-history" onclick="openHistoryModal()" title="View past flight data">📅 HISTORY</button>
+        </div>
+        <div class="divider-line"></div>
+        <div class="tabs-container">
+            <button id="btn-dep" class="tab-btn active" onclick="switchTab('dep')">DEPARTURES</button>
+            <button id="btn-arr" class="tab-btn"        onclick="switchTab('arr')">ARRIVALS</button>
+        </div>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="controls-container">
+        <div class="search-wrapper">
+            <input type="text" id="search-box" placeholder="Search (e.g., HAN, VN311)...">
+            <span id="clear-search">✖</span>
+        </div>
+        <select id="type-filter">
+            <option value="ALL">All Flights</option>
+            <option value="I">International</option>
+            <option value="D">Domestic</option>
+        </select>
+        <select id="terminal-filter">
+            <option value="ALL">All Terminals</option>
+            <option value="1">Terminal 1</option>
+            <option value="2">Terminal 2</option>
+            <option value="3">Terminal 3</option>
+        </select>
+        <select id="status-filter">
+            <option value="ALL">All Status</option>
+            <option value="NORMAL">Normal / On Time</option>
+            <option value="DELAYED">Delayed / Changed</option>
+            <option value="COMPLETED">Departed / Arrived</option>
+            <option value="CANCELED">Canceled</option>
+        </select>
+        <div id="airline-filter-wrapper" class="custom-select-wrapper">
+            <div class="custom-select-display" onclick="toggleAirlineDropdown()">
+                <span id="airline-filter-display-text">All Airlines</span>
+                <span class="cs-arrow">▼</span>
             </div>
-            
-            <div id="flight-list" class="flight-list">
-                <p style="text-align: center; padding: 40px; font-size: 24px;">SYSTEM INITIALIZING...</p>
+            <div id="airline-filter-list" class="custom-select-list"></div>
+        </div>
+    </div>
+
+    <!-- FLIGHT BOARD -->
+    <div class="board-container">
+        <div class="board-header">
+            <span id="col-std">STD</span>
+            <span id="col-etd">ETD / ATD</span>
+            <span id="col-loc">DESTINATION</span>
+            <span id="col-term">TERMINAL</span>
+            <span id="col-airline">AIRLINE</span>
+            <span id="col-flight">FLIGHT</span>
+            <span id="col-gate">GATE</span>
+            <span id="col-remarks">REMARKS</span>
+            <span id="col-status">STATUS</span>
+        </div>
+        <div id="flight-list" class="flight-list">
+            <p style="text-align:center;padding:40px;font-size:24px;">SYSTEM INITIALIZING...</p>
+        </div>
+    </div>
+</div>
+
+<!-- ===== AIRLINE PROFILE MODAL ===== -->
+<div id="airline-modal" class="modal-overlay">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <span class="close-btn" onclick="closeModals()">×</span>
+        <div style="display:flex;align-items:center;gap:15px;margin-bottom:12px;">
+            <img id="am-logo" src="" style="width:52px;background:#fff;padding:3px;border-radius:5px;display:none;">
+            <h2 id="am-title" class="modal-title" style="margin:0;"></h2>
+        </div>
+        <div id="am-info" style="display:none;margin-bottom:14px;"></div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <button id="am-dep-btn" class="tab-btn active" style="min-width:130px;font-size:1.2rem;padding:5px 10px;" onclick="switchAirlineTab('dep')">DEPARTURES</button>
+            <button id="am-arr-btn" class="tab-btn"        style="min-width:130px;font-size:1.2rem;padding:5px 10px;" onclick="switchAirlineTab('arr')">ARRIVALS</button>
+        </div>
+        <div id="am-list"></div>
+    </div>
+</div>
+
+<!-- ===== FLIGHT DETAIL MODAL ===== -->
+<div id="flight-modal" class="modal-overlay">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <span class="close-btn" onclick="closeModals()">×</span>
+        <div style="display:flex;align-items:center;gap:15px;margin-bottom:20px;">
+            <img id="fm-logo" src="" style="width:50px;background:#fff;padding:3px;border-radius:5px;">
+            <h2 id="fm-title" class="modal-title" style="margin:0;">Flight Details</h2>
+        </div>
+        <div class="modal-body">
+            <div class="timeline-box">
+                <div class="line-row" id="fm-line1"><strong>STD:</strong> --:-- &nbsp;&nbsp;&nbsp;&nbsp; <strong>STA:</strong> --:--</div>
+                <div class="line-row" id="fm-line2"><span class="tl-logo logo-nrt">NRT</span> <strong>ETD/ATD:</strong> <span class="text-yellow">--:--</span></div>
+                <div class="line-row" id="fm-line3"><span class="tl-logo logo-fr24">FR24</span> <strong>STD:</strong> <span class="text-white">--:--</span> <span class="dot bg-gray"></span></div>
+                <div class="line-row" id="fm-line4"><span class="tl-logo logo-fr24">FR24</span> <strong>STA:</strong> <span class="text-white">--:--</span> <span class="dot bg-gray"></span></div>
+            </div>
+            <div class="modal-grid-bottom">
+                <div><span style="color:#aaa;">Terminal:</span> <strong id="fm-terminal" style="color:#00ffff;"></strong></div>
+                <div><span style="color:#aaa;">Floor/Lobby:</span> <strong id="fm-floor"></strong></div>
+                <div><span style="color:#aaa;">Gate:</span> <strong id="fm-gate"></strong></div>
+                <div id="fm-checkin-container"><span style="color:#aaa;">Check-in:</span> <strong id="fm-checkin" style="color:#ffcc00;"></strong></div>
+                <div id="fm-remark-container"><span style="color:#aaa;">Remarks:</span> <span id="fm-remark" class="remark-badge"></span></div>
+                <div><span style="color:#aaa;">Status:</span> <strong id="fm-status"></strong></div>
+            </div>
+            <div class="flight-intel-box">
+                <div>🛩️ <span style="color:#aaa;">Aircraft:</span> <strong id="fm-aircraft" style="color:#ffcc00;">Scanning...</strong> <span id="fm-reg" class="tail-reg" style="display:none;"></span></div>
+                <div>⏱️ <span style="color:#aaa;">Est. Flight Time:</span> <strong id="fm-flight-time">Calculating...</strong></div>
+                <div>🌤️ <span style="color:#aaa;">Dest Weather:</span> <strong id="fm-dest-weather">Fetching...</strong></div>
+            </div>
+            <div id="aircraft-photo-container" class="aircraft-photo-container">
+                <div class="aircraft-info" id="aircraft-info-text">Loading Photo...</div>
+                <img id="aircraft-img" src="">
             </div>
         </div>
     </div>
-    <script src="script.js"></script>
+</div>
+
+<!-- ===== HISTORY MODAL ===== -->
+<div id="history-modal" class="modal-overlay">
+    <div class="modal-content" onclick="event.stopPropagation()" style="max-width:540px;">
+        <span class="close-btn" onclick="closeHistoryModal()">×</span>
+        <h2 class="modal-title" style="margin-bottom:16px;">📅 Past Flight Data</h2>
+        <p style="color:#666;font-size:0.95rem;margin-bottom:14px;font-family:'Oswald',sans-serif;">
+            Select a date to view archived departure and arrival data.
+            Data is saved automatically each day.
+        </p>
+        <div id="history-date-list" style="border:1px solid #222;border-radius:6px;max-height:400px;overflow-y:auto;">
+            <p style="color:#666;padding:20px;text-align:center;">Loading...</p>
+        </div>
+        <div style="margin-top:12px;font-size:0.85rem;color:#444;font-family:'Oswald',sans-serif;">
+            💡 Data is synced to Google Sheets if configured. See server.js for setup instructions.
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>
